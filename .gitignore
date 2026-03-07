@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# Database
+postgres_data/
+redis_data/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Prisma
+prisma/.env
+
+# IDE settings
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache
+.cache/
+.eslintcache

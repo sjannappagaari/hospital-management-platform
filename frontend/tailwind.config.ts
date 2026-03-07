@@ -1,0 +1,42 @@
+import type { Config } from 'tailwindcss'
+import animate from 'tailwindcss-animate'
+
+const config = {
+  darkMode: ['class'],
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: '#0066CC',
+          foreground: '#ffffff',
+        },
+        secondary: {
+          DEFAULT: '#008B8B',
+          foreground: '#ffffff',
+        },
+        accent: {
+          DEFAULT: '#90EE90',
+          foreground: '#000000',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+    },
+  },
+  plugins: [animate],
+} satisfies Config
+
+export default config

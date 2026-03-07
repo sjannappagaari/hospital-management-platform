@@ -1,0 +1,417 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  DOCTOR
+  PATIENT
+  STAFF
+}
+
+enum AppointmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  firstName String?
+  lastName  String?
+  phone     String?
+  avatar    String?
+  role      UserRole   @default(PATIENT)
+  isActive  Boolean    @default(true)
+  
+  // Relations
+  doctor              Doctor?
+  appointments        Appointment[]
+  patient             Patient?
+  testimonials        Testimonial[]
+  blogPosts           BlogPost[]
+  careerApplications  CareerApplication[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================
+// HOSPITAL STRUCTURE
+// ============================================
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?  // Icon name or URL
+  image       String?  // Department banner image
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  
+  // Relations
+  doctors         Doctor[]
+  appointments    Appointment[]
+  testimonials    Testimonial[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id])
+  
+  specialization  String   // e.g., "Cardiologist", "Surgeon"
+  qualifications  String[] // Array of qualifications
+  experience      Int      // Years of experience
+  bio             String?
+  image           String?  // Doctor's photo
+  registrationNo  String?  // Medical registration number
+  
+  consultationFee Int      // In paisa (÷100 for rupees)
+  isAvailable     Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  
+  // Relations
+  availability    DoctorAvailability[]
+  appointments    Appointment[]
+  testimonials    Testimonial[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+}
+
+model DoctorAvailability {
+  id        String   @id @default(cuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek DayOfWeek
+  startTime String   // HH:MM format
+  endTime   String   // HH:MM format
+  slotDuration Int   // In minutes (default 30)
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([doctorId, dayOfWeek])
+  @@index([doctorId])
+}
+
+// ============================================
+// APPOINTMENTS & PATIENTS
+// ============================================
+
+model Patient {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  dateOfBirth DateTime?
+  gender      String?  // MALE, FEMALE, OTHER
+  bloodGroup  String?
+  allergies   String?
+  medicalHistory String?
+  emergencyContact String?
+  emergencyPhone String?
+  
+  // Relations
+  appointments Appointment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+  
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  appointmentDate DateTime
+  appointmentTime String   // HH:MM format
+  
+  status      AppointmentStatus @default(PENDING)
+  reason      String?
+  notes       String?
+  
+  reminderSent Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([departmentId])
+  @@index([appointmentDate])
+  @@index([status])
+}
+
+// ============================================
+// CONTENT MANAGEMENT
+// ============================================
+
+model HealthPackage {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String
+  price       Int      // In paisa
+  duration    String?  // "3 days", "1 month", etc.
+  tests       String[] // Array of test names
+  benefits    String[] // Array of benefits
+  image       String?
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String   // Rich text content
+  image       String?  // Featured image
+  
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  
+  status      BlogPostStatus @default(DRAFT)
+  publishedAt DateTime?
+  
+  views       Int      @default(0)
+  
+  isActive    Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([authorId])
+  @@index([publishedAt])
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  title       String?
+  content     String
+  rating      Int      // 1-5 stars
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  doctorId    String?
+  doctor      Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  
+  isApproved  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isApproved])
+}
+
+model InsurancePartner {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  website     String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  displayOrder Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+// ============================================
+// CAREERS
+// ============================================
+
+model CareerOpening {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  department  String
+  description String
+  requirements String[]
+  responsibilities String[]
+  salary      String?
+  experience  String?
+  location    String
+  jobType     String   // FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP
+  
+  isActive    Boolean  @default(true)
+  isOpen      Boolean  @default(true)
+  displayOrder Int     @default(0)
+  
+  // Relations
+  applications CareerApplication[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isOpen])
+}
+
+model CareerApplication {
+  id          String   @id @default(cuid())
+  careerId    String
+  career      CareerOpening @relation(fields: [careerId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  resume      String   // File URL
+  coverLetter String?
+  status      String   @default("applied") // applied, shortlisted, rejected, accepted
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([careerId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================
+// SITE SETTINGS & CONFIGURATION
+// ============================================
+
+model SiteSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   // Store as JSON string for complex values
+  description String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model HospitalInfo {
+  id          String   @id @default(cuid())
+  name        String   @default("New Hospital")
+  description String?
+  logo        String?
+  banner      String?
+  
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
+  
+  latitude    Float?
+  longitude   Float?
+  
+  website     String?
+  facebook    String?
+  instagram   String?
+  twitter     String?
+  linkedin    String?
+  
+  established DateTime?
+  bedCount    Int?
+  department_count Int?
+  doctor_count Int?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// FEATURE TOGGLES & SETTINGS
+// ============================================
+
+model FeatureToggle {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  enabled     Boolean  @default(true)
+  description String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([enabled])
+}

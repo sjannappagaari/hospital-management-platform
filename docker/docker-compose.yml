@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: hospital_postgres
+    environment:
+      POSTGRES_USER: hospital
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: hospital_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospital"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: hospital_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NestJS Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.backend
+    container_name: hospital_backend
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://hospital:password@postgres:5432/hospital_db"
+      JWT_SECRET: "your-super-secret-key-change-in-production"
+      JWT_EXPIRES_IN: "24h"
+      PORT: 8000
+      CORS_ORIGIN: "http://localhost:3000,http://localhost:3001"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.frontend
+    container_name: hospital_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Next.js Admin Dashboard
+  admin:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.admin
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    container_name: hospital_admin
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: hospital_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - admin
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: hospital_network

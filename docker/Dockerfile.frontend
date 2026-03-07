@@ -1,0 +1,36 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY frontend/package*.json ./
+
+RUN npm ci
+
+COPY frontend . .
+
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache dumb-init
+
+COPY frontend/package*.json ./
+
+RUN npm ci --only=production
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY frontend/next.config.ts ./
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+CMD ["npm", "start"]
