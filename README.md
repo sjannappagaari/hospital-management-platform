@@ -409,3 +409,4 @@ For issues and questions, please open an issue on GitHub or contact support@hosp
 **Version**: 1.0.0  
 **Status**: ✅ Production Ready
 # hospital-management-platform
+# hospital-management-platform
