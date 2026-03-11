@@ -2,15 +2,15 @@
 export const mockData = {
   hospitalInfo: {
     id: '1',
-    name: 'Apollo Hospital',
-    address: '123 Medical Complex, New Delhi',
-    phone: '+91-11-4141-2000',
-    email: 'info@apollohospital.com',
-    description: 'Leading multi-specialty hospital providing world-class healthcare',
+    name: 'Kiran Hospital, Srikalahasti',
+    address: 'A.P.S.R.T.C Bus stand, Srikalahasti, Andhra Pradesh 517644, India',
+    phone: '9494746400',
+    email: 'kiran@gmail.com',
+    description: 'Leading multi-specialty hospital providing high-class healthcare',
     foundedYear: 2010,
-    totalBeds: 500,
-    totalDoctors: 200,
-    totalStaff: 1000,
+    totalBeds: 20,
+    totalDoctors: 4,
+    totalStaff: 10,
     emergencySupport: true,
   },
   users: [

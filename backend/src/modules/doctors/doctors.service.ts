@@ -162,14 +162,14 @@ export class DoctorsService {
 
   async getAvailableSlots(doctorId: string, date: string) {
     // Get doctor availability for the day
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', {
-      weekday: 'long',
-    });
+    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayOfWeekIndex = new Date(date).getDay();
+    const dayOfWeek = dayNames[dayOfWeekIndex] as any;
 
     const availability = await this.prisma.doctorAvailability.findFirst({
       where: {
         doctorId,
-        dayOfWeek: dayOfWeek.toUpperCase(),
+        dayOfWeek: dayOfWeek,
         isActive: true,
       },
     });
@@ -186,7 +186,7 @@ export class DoctorsService {
           gte: new Date(date),
           lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
         },
-        status: { in: ['APPROVED', 'PENDING'] },
+        status: { in: ['APPROVED' as any, 'PENDING' as any] },
       },
     });
 

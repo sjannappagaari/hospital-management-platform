@@ -1,12 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface HospitalData {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  description: string;
+  totalBeds: number;
+  totalDoctors: number;
+  totalStaff: number;
+  foundedYear: number;
+  emergencySupport: boolean;
+}
 
 export default function AdminDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [hospitalData, setHospitalData] = useState<HospitalData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [restarting, setRestarting] = useState(false);
 
   const handleLogin = (e: any) => {
     e.preventDefault();
@@ -22,6 +39,62 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setActiveTab('dashboard');
+  };
+
+  useEffect(() => {
+    if (isLoggedIn && !hospitalData) {
+      fetchHospitalData();
+    }
+  }, [isLoggedIn]);
+
+  const fetchHospitalData = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/hospital');
+      const data = await response.json();
+      setHospitalData(data);
+    } catch (error) {
+      console.error('Failed to fetch hospital data:', error);
+    }
+  };
+
+  const handleHospitalUpdate = async () => {
+    if (!hospitalData) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/hospital', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hospitalData),
+      });
+      if (response.ok) {
+        setSuccessMessage('Hospital information updated successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Failed to update hospital information');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestartServices = async () => {
+    if (!window.confirm('This will restart all services. Continue?')) return;
+    
+    setRestarting(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/restart', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        alert('Services are restarting. Please wait 30 seconds and refresh your browser.');
+        setTimeout(() => window.location.reload(), 5000);
+      }
+    } catch (error) {
+      alert('Failed to restart services. Please restart manually.');
+    } finally {
+      setRestarting(false);
+    }
   };
 
   if (!isLoggedIn) {
@@ -77,13 +150,26 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-blue-600 text-white py-4 shadow">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">🏥 Apollo Hospital Admin</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 px-4 py-2 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
+          <h1 className="text-2xl font-bold">🏥 Hospital Admin Dashboard</h1>
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={handleRestartServices}
+              disabled={restarting}
+              className={`px-4 py-2 rounded font-semibold ${
+                restarting
+                  ? 'bg-gray-500 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-600'
+              }`}
+            >
+              {restarting ? '⏳ Restarting...' : '🔄 Restart Services'}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 px-4 py-2 rounded hover:bg-red-600"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -92,12 +178,12 @@ export default function AdminDashboard() {
         <aside className="w-64 bg-gray-800 text-white min-h-screen p-4">
           <nav className="space-y-4">
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab('hospital')}
               className={`w-full text-left px-4 py-2 rounded flex items-center gap-2 ${
-                activeTab === 'dashboard' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                activeTab === 'hospital' ? 'bg-blue-600' : 'hover:bg-gray-700'
               }`}
             >
-              📊 Dashboard
+              🏥 Hospital Info
             </button>
             <button
               onClick={() => setActiveTab('doctors')}
@@ -144,6 +230,17 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <main className="flex-1 p-8">
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-500 text-white rounded flex justify-between items-center">
+              <span>✅ {successMessage}</span>
+              <button
+                onClick={() => setSuccessMessage('')}
+                className="text-xl font-bold hover:bg-green-600 px-2 rounded"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {activeTab === 'dashboard' && (
             <div>
               <h2 className="text-3xl font-bold mb-8">Dashboard</h2>
@@ -339,37 +436,162 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeTab === 'hospital' && (
+            <div className="bg-white p-6 rounded shadow">
+              <h2 className="text-3xl font-bold mb-8">Hospital Information</h2>
+              {isLoading || !hospitalData ? (
+                <p className="text-gray-500">Loading...</p>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleHospitalUpdate();
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Hospital Name</label>
+                      <input
+                        type="text"
+                        value={hospitalData.name}
+                        onChange={(e) =>
+                          setHospitalData({ ...hospitalData, name: e.target.value })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        value={hospitalData.phone}
+                        onChange={(e) =>
+                          setHospitalData({ ...hospitalData, phone: e.target.value })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={hospitalData.email}
+                        onChange={(e) =>
+                          setHospitalData({ ...hospitalData, email: e.target.value })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Founded Year</label>
+                      <input
+                        type="number"
+                        value={hospitalData.foundedYear}
+                        onChange={(e) =>
+                          setHospitalData({
+                            ...hospitalData,
+                            foundedYear: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Total Beds</label>
+                      <input
+                        type="number"
+                        value={hospitalData.totalBeds}
+                        onChange={(e) =>
+                          setHospitalData({
+                            ...hospitalData,
+                            totalBeds: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Total Doctors</label>
+                      <input
+                        type="number"
+                        value={hospitalData.totalDoctors}
+                        onChange={(e) =>
+                          setHospitalData({
+                            ...hospitalData,
+                            totalDoctors: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Total Staff</label>
+                      <input
+                        type="number"
+                        value={hospitalData.totalStaff}
+                        onChange={(e) =>
+                          setHospitalData({
+                            ...hospitalData,
+                            totalStaff: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Emergency Support</label>
+                      <select
+                        value={hospitalData.emergencySupport ? 'true' : 'false'}
+                        onChange={(e) =>
+                          setHospitalData({
+                            ...hospitalData,
+                            emergencySupport: e.target.value === 'true',
+                          })
+                        }
+                        className="w-full border rounded px-3 py-2"
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Address</label>
+                    <textarea
+                      value={hospitalData.address}
+                      onChange={(e) =>
+                        setHospitalData({ ...hospitalData, address: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2 h-24"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <textarea
+                      value={hospitalData.description}
+                      onChange={(e) =>
+                        setHospitalData({ ...hospitalData, description: e.target.value })
+                      }
+                      className="w-full border rounded px-3 py-2 h-24"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold"
+                  >
+                    💾 Save Changes
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
           {activeTab === 'settings' && (
             <div>
               <h2 className="text-3xl font-bold mb-8">Settings</h2>
               <div className="bg-white p-6 rounded shadow max-w-md">
-                <div className="mb-6">
-                  <label className="block font-semibold mb-2">Hospital Name</label>
-                  <input
-                    type="text"
-                    defaultValue="Apollo Hospital"
-                    className="w-full border px-4 py-2 rounded"
-                  />
-                </div>
-                <div className="mb-6">
-                  <label className="block font-semibold mb-2">Contact Email</label>
-                  <input
-                    type="email"
-                    defaultValue="info@apollohospital.com"
-                    className="w-full border px-4 py-2 rounded"
-                  />
-                </div>
-                <div className="mb-6">
-                  <label className="block font-semibold mb-2">Contact Phone</label>
-                  <input
-                    type="tel"
-                    defaultValue="+91-11-4141-2000"
-                    className="w-full border px-4 py-2 rounded"
-                  />
-                </div>
-                <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-                  Save Settings
-                </button>
+                <p className="text-gray-600">Additional settings coming soon...</p>
               </div>
             </div>
           )}

@@ -39,6 +39,22 @@ export class MockController {
     return this.mockDataService.getHospitalInfo();
   }
 
+  @Put('hospital')
+  updateHospitalInfo(@Body() body: any) {
+    return this.mockDataService.updateHospitalInfo(body);
+  }
+
+  @Post('restart')
+  restartServices() {
+    // This endpoint signals that services should be restarted
+    // In a production environment, this would trigger a proper restart mechanism
+    // For now, we'll just return a success response
+    return {
+      message: 'Services restart initiated. Please wait 30 seconds.',
+      timestamp: new Date(),
+    };
+  }
+
   // Departments
   @Get('departments')
   getDepartments() {

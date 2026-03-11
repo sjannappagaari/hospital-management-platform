@@ -8,6 +8,7 @@ export class MockDataService {
     const newUser = {
       id: `user-${Date.now()}`,
       email,
+      password,
       firstName,
       lastName,
       role: 'PATIENT',
@@ -37,6 +38,18 @@ export class MockDataService {
   // Hospital info
   getHospitalInfo() {
     return mockData.hospitalInfo;
+  }
+
+  updateHospitalInfo(updatedData: any) {
+    // Update the hospital info in memory
+    mockData.hospitalInfo = {
+      ...mockData.hospitalInfo,
+      ...updatedData,
+    };
+    return {
+      message: 'Hospital information updated successfully',
+      data: mockData.hospitalInfo,
+    };
   }
 
   // Departments
